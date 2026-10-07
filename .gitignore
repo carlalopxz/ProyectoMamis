@@ -3,7 +3,8 @@
 __pycache__/
 *.pyc
 
-# Archivos temporales de base de datos
+# Base de datos local (generada automaticamente en cada entorno)
+data/*.db
 data/*.db-journal
 
 # Archivos del sistema
@@ -11,3 +12,4 @@ data/*.db-journal
 .DS_Store
 Thumbs.db
 desktop.ini
+subir_a_github.bat

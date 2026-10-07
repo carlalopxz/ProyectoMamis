@@ -33,16 +33,19 @@ def normalize_text(text: str) -> str:
     return ''.join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn').lower()
 
 def init_db():
-    """Inicializa la base de datos y la tabla virtual de búsqueda FTS5."""
+    """Inicializa la base de datos y la tabla virtual de búsqueda FTS5 con auto-recuperación."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     for cat in CATEGORIES.keys():
         (DOCS_DIR / cat).mkdir(parents=True, exist_ok=True)
 
-    with sqlite3.connect(DB_PATH) as conn:
+    def _build(conn):
         cursor = conn.cursor()
-        
-        # Tabla principal de entradas
+        cursor.execute("PRAGMA quick_check;")
+        check_res = cursor.fetchone()
+        if check_res and check_res[0] != "ok":
+            raise sqlite3.DatabaseError(f"Integrity check failed: {check_res[0]}")
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +59,6 @@ def init_db():
             );
         """)
 
-        # Tabla virtual para búsqueda Full-Text (FTS5)
         cursor.execute("""
             CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
                 filename,
@@ -68,7 +70,6 @@ def init_db():
             );
         """)
 
-        # Triggers para mantener FTS5 sincronizado
         cursor.execute("""
             CREATE TRIGGER IF NOT EXISTS entries_ai AFTER INSERT ON entries BEGIN
                 INSERT INTO entries_fts(rowid, filename, category, section, content)
@@ -90,6 +91,19 @@ def init_db():
             END;
         """)
         conn.commit()
+
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            _build(conn)
+    except (sqlite3.DatabaseError, sqlite3.OperationalError) as err:
+        print(f"Base de datos no válida o corrupta ({err}). Regenerando...")
+        if DB_PATH.exists():
+            try:
+                DB_PATH.unlink()
+            except Exception:
+                pass
+        with sqlite3.connect(DB_PATH) as conn:
+            _build(conn)
 
 
 def extract_pdf_chunks(pdf_path: Path) -> List[Dict[str, str]]:
@@ -354,17 +368,20 @@ def search_documents(query: str, category_filter: Optional[str] = None, limit: i
 
 def get_stats() -> Dict[str, Any]:
     """Obtiene el resumen de documentos indexados por categoría."""
-    init_db()
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(DISTINCT file_path), COUNT(id) FROM entries")
-        total_files, total_chunks = cursor.fetchone()
+    try:
+        init_db()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(DISTINCT file_path), COUNT(id) FROM entries")
+            total_files, total_chunks = cursor.fetchone()
 
-        cursor.execute("SELECT category, COUNT(DISTINCT file_path) FROM entries GROUP BY category")
-        categories_count = dict(cursor.fetchall())
+            cursor.execute("SELECT category, COUNT(DISTINCT file_path) FROM entries GROUP BY category")
+            categories_count = dict(cursor.fetchall())
 
-    return {
-        "total_files": total_files or 0,
-        "total_chunks": total_chunks or 0,
-        "by_category": categories_count
-    }
+        return {
+            "total_files": total_files or 0,
+            "total_chunks": total_chunks or 0,
+            "by_category": categories_count
+        }
+    except sqlite3.DatabaseError:
+        return {"total_files": 0, "total_chunks": 0, "by_category": {}}

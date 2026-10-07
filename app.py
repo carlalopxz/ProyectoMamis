@@ -161,10 +161,15 @@ if not st.session_state["autenticado"]:
 
 # ----------------- INICIALIZACIÓN -----------------
 if "db_initialized" not in st.session_state:
-    indexer.init_db()
-    stats_check = indexer.get_stats()
-    if stats_check["total_files"] == 0:
-        with st.spinner("Preparando biblioteca por primera vez..."):
+    try:
+        indexer.init_db()
+        stats_check = indexer.get_stats()
+        if stats_check["total_files"] == 0:
+            with st.spinner("Preparando e indexando biblioteca por primera vez..."):
+                indexer.index_all_documents()
+    except Exception as e:
+        with st.spinner("Reconstruyendo biblioteca..."):
+            indexer.init_db()
             indexer.index_all_documents()
     st.session_state["db_initialized"] = True
 
@@ -289,6 +294,7 @@ if active_query:
         st.markdown(f"#### 🔎 Encontramos **{len(results)}** coincidencia(s) para *'{active_query}'*:")
         
         for idx, item in enumerate(results):
+            cat_display = indexer.CATEGORIES.get(item['category'], item['category'].title())
             # Resolver ruta compatible con Windows y Linux (Streamlit Cloud)
             clean_rel = item['file_path'].replace("\\", "/")
             file_abs_path = indexer.BASE_DIR / clean_rel
