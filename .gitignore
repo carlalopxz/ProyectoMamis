@@ -1,0 +1,13 @@
+# Entorno virtual y dependencias
+.venv/
+__pycache__/
+*.pyc
+
+# Archivos temporales de base de datos
+data/*.db-journal
+
+# Archivos del sistema
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
