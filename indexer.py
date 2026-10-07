@@ -232,7 +232,7 @@ def index_all_documents() -> Dict[str, int]:
                     if ext not in [".pdf", ".epub", ".txt"]:
                         continue
 
-                    rel_path = str(file_path.relative_to(BASE_DIR))
+                    rel_path = file_path.relative_to(BASE_DIR).as_posix()
                     found_files.add(rel_path)
                     current_mtime = file_path.stat().st_mtime
 

@@ -289,8 +289,18 @@ if active_query:
         st.markdown(f"#### 🔎 Encontramos **{len(results)}** coincidencia(s) para *'{active_query}'*:")
         
         for idx, item in enumerate(results):
-            cat_display = indexer.CATEGORIES.get(item['category'], item['category'].title())
-            file_abs_path = indexer.BASE_DIR / item['file_path']
+            # Resolver ruta compatible con Windows y Linux (Streamlit Cloud)
+            clean_rel = item['file_path'].replace("\\", "/")
+            file_abs_path = indexer.BASE_DIR / clean_rel
+            
+            if not file_abs_path.exists():
+                candidate = indexer.DOCS_DIR / item['category'] / item['filename']
+                if candidate.exists():
+                    file_abs_path = candidate
+                else:
+                    matches = list(indexer.DOCS_DIR.rglob(item['filename']))
+                    if matches:
+                        file_abs_path = matches[0]
             
             with st.container():
                 st.markdown(f"""
@@ -309,7 +319,7 @@ if active_query:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                col_exp, col_down = st.columns([4.2, 1.1])
+                col_exp, col_down = st.columns([4.2, 1.2])
                 with col_exp:
                     with st.expander(f"📖 Leer contexto completo ({item['section']})"):
                         st.write(item["content"])
@@ -317,14 +327,27 @@ if active_query:
                 with col_down:
                     if file_abs_path.exists():
                         with open(file_abs_path, "rb") as f:
-                            st.download_button(
-                                label="📥 Descargar",
-                                data=f.read(),
-                                file_name=item["filename"],
-                                mime="application/octet-stream",
-                                key=f"down_{idx}_{item['id']}",
-                                use_container_width=True
-                            )
+                            file_bytes = f.read()
+
+                        mime_type = "application/octet-stream"
+                        fn_lower = item["filename"].lower()
+                        if fn_lower.endswith(".pdf"):
+                            mime_type = "application/pdf"
+                        elif fn_lower.endswith(".epub"):
+                            mime_type = "application/epub+zip"
+                        elif fn_lower.endswith(".txt"):
+                            mime_type = "text/plain; charset=utf-8"
+
+                        st.download_button(
+                            label="📥 Descargar",
+                            data=file_bytes,
+                            file_name=item["filename"],
+                            mime=mime_type,
+                            key=f"down_{idx}_{item['id']}",
+                            use_container_width=True
+                        )
+                    else:
+                        st.caption("📄 *Ver texto*")
                 st.markdown("<hr style='border: none; border-top: 1px dashed #E2DDF0; margin: 0.6rem 0 1rem 0;'>", unsafe_allow_html=True)
     else:
         st.warning(f"No encontramos resultados para '{active_query}'.")
