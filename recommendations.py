@@ -88,13 +88,6 @@ def init_recom_db():
         """)
         conn.commit()
 
-        # Comprobar si ya existen datos
-        cursor.execute("SELECT COUNT(*) FROM recommendations;")
-        count = cursor.fetchone()[0]
-        if count == 0:
-            seed_initial_recommendations(cursor)
-            conn.commit()
-
 def seed_initial_recommendations(cursor: sqlite3.Cursor):
     """Inserta recomendaciones de ejemplo útiles y reales para la comunidad."""
     seeds = [

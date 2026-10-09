@@ -521,15 +521,18 @@ with tab_recomendaciones:
     )
 
     # Mensaje de resultados
-    if recom_search_text.strip():
-        st.markdown(f"#### 🔎 Encontramos **{len(recom_results)}** recomendación(es) para *'{recom_search_text.strip()}'*:")
-    else:
-        st.markdown(f"#### 📋 Todas las recomendaciones disponibles ({len(recom_results)}):")
-
     if not recom_results:
-        st.warning(f"No encontramos recomendaciones que coincidan con '{recom_search_text}'.")
-        st.info("💡 **Consejo:** Prueba con un término más general (ej: *silla*, *pediatra*, *lactancia*) o haz clic en **➕ Compartir Dato** para agregar el primer dato.")
+        if recom_search_text.strip():
+            st.warning(f"No encontramos recomendaciones que coincidan con '{recom_search_text.strip()}'.")
+            st.info("💡 **Consejo:** Prueba con otra palabra o haz clic en **➕ Compartir Dato** para agregar una recomendación.")
+        else:
+            st.info("✨ **Aún no hay recomendaciones cargadas en la Tribu.**\n\nSé la primera en compartir un profesional de la salud de confianza, un producto útil para mamás y bebés o un tip de crianza haciendo clic en el botón **➕ Compartir Dato** arriba a la derecha.")
     else:
+        if recom_search_text.strip():
+            st.markdown(f"#### 🔎 Encontramos **{len(recom_results)}** recomendación(es) para *'{recom_search_text.strip()}'*:")
+        else:
+            st.markdown(f"#### 📋 Todas las recomendaciones disponibles ({len(recom_results)}):")
+
         for item in recom_results:
             cat_key = item.get("category", "tip")
             cat_info = recommendations.RECOM_CATEGORIES.get(cat_key, recommendations.RECOM_CATEGORIES["tip"])

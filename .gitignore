@@ -3,9 +3,9 @@
 __pycache__/
 *.pyc
 
-# Base de datos local (generada automaticamente en cada entorno)
-data/*.db
-data/*.db-journal
+# Base de datos documental generada localmente a partir de los PDFs (14MB)
+data/index.db
+data/index.db-journal
 
 # Archivos del sistema
 *.log
