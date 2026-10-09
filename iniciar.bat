@@ -4,6 +4,9 @@ echo ==============================================
 echo   Iniciando Rincon de Familias...
 echo ==============================================
 cd /d "%~dp0"
-call .venv\Scripts\activate.bat
-python -m streamlit run app.py
+if exist ".venv\Scripts\python.exe" (
+    ".venv\Scripts\python.exe" -m streamlit run app.py
+) else (
+    python -m streamlit run app.py
+)
 pause
